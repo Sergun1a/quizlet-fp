@@ -16,20 +16,7 @@ def init_quizlet(dictionaries):
     return quizlet
 
 
-def random_translation(quizlet):
-    """
-    Запрашиваю перевод случайного слова из выбранного словаря
-
-    :return: str|none
-    """
-    chosen_dict = random.randint(0, 1)
-    lang = ""
-    if (len(quizlet['ru_en_translations']) == 0) and (len(quizlet['en_ru_translations']) == 0):
-        return {
-            "result": "out_of_translations",
-            "quizlet": quizlet
-        }
-
+def check_dictionary(quizlet, chosen_dict):
     if quizlet['ru_en_translations'] and quizlet['en_ru_translations']:
         if chosen_dict == 0:
             lang = "ru"
@@ -50,10 +37,23 @@ def random_translation(quizlet):
         dictionary = quizlet['en_ru_dict']
         translations = quizlet['en_ru_translations']
 
-    print("Перевод из языка \"{}\" на \"{}\" язык\n\n".format(
-        dictionary['primary_language'], dictionary['secondary_language']))
+    return lang, dictionary, translations
+
+
+def random_translation(quizlet):
+    """
+    Запрашиваю перевод случайного слова из выбранного словаря
+
+    :return: str|none
+    """
+    chosen_dict = random.randint(0, 1)
+    lang, dictionary, translations = check_dictionary(quizlet, chosen_dict)
     basic_word = random.sample(translations.keys(), 1)[0]
-    translation = purify(input(basic_word + "\t=>\t"))
+    return basic_word, lang, dictionary, translations
+
+
+def analyze_answer(basic_word, translation, lang, translations, quizlet):
+    res = False
     if lang == "ru":
         quizlet['ru_en_total_translations'] = quizlet['ru_en_total_translations'] + 1
     if lang == "en":
@@ -62,40 +62,25 @@ def random_translation(quizlet):
         if translation == translations[basic_word]:
             if lang == "ru":
                 quizlet['ru_en_correct_translations'] = quizlet['ru_en_correct_translations'] + 1
+                quizlet['ru_en_translations'].pop(basic_word)
             if lang == "en":
                 quizlet['en_ru_correct_translations'] = quizlet['en_ru_correct_translations'] + 1
-            print("\nПравильно\n")
-            translations.pop(basic_word)
-        else:
-            print("\nНеверно. Правильный перевод: {}\n".format(translations[basic_word]))
+                quizlet['en_ru_translations'].pop(basic_word)
+
+            res = True
     return {
-        "result": None,
-        "quizlet": quizlet
+        "result": res,
+        "quizlet": quizlet,
     }
 
 
-def post_translation_actions(quizlet):
+def results(quizlet):
     """
-    Вывожу доступные действия после ответа на вопрос викторины
-
-    :return: none
-    """
-    print("\nКлавиша \"N\" - продолжить викторину(следующий перевод)\n"
-          "Клавиша \"S\" - завершить викторину и выйти в главное меню\n"
-          "Клавиша \"R\" - завершить викторину и просмотреть результаты")
-
-
-def results(quizlet, reason=""):
-    """
-    Вывожу результаты викторины
+    Подвожу результаты викторины
 
     :param quizlet: Данные квизлета
-    :param reason: Причина показа результатов. Например: в пуле переводов закончились слова.
-    :return: none
     """
     clear_screen()
-    print(reason)
-
     if quizlet['en_ru_total_translations'] == 0:  # избегаю деления на ноль
         en_ru_percent = (quizlet['en_ru_correct_translations'] / 1) * 100
     else:
@@ -106,16 +91,4 @@ def results(quizlet, reason=""):
     else:
         ru_en_percent = (quizlet['ru_en_correct_translations'] / quizlet['ru_en_total_translations']) * 100
 
-    print("Всего было переведено слов: {}\n".format(
-        quizlet['ru_en_total_translations'] + quizlet['en_ru_total_translations']))
-    print("Всего переводов с Русского на Английский : {}\n".format(
-        quizlet['ru_en_total_translations']))
-    print("Правильных переводов с Русского на Английский : {} из {} ({:.2f}%)\n".format(
-        quizlet['ru_en_correct_translations'], quizlet['ru_en_total_translations'],
-        ru_en_percent))
-    print("Всего переводов с Английского на Русский : {}\n".format(
-        quizlet['en_ru_total_translations']))
-    print("Правильных переводов с Английского на Русский : {} из {} ({:.2f}%)\n".format(
-        quizlet['en_ru_correct_translations'], quizlet['en_ru_total_translations'],
-        en_ru_percent))
-    print("\n\nНажмите клавишу \"S\" для выхода в главное меню\n")
+    return en_ru_percent, ru_en_percent
