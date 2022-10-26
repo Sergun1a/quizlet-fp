@@ -1,78 +1,87 @@
 from helpers.helpers import wait, clear_screen, purify
+from classes.quizlet.quizlet import *
+from classes.dictionary.default_dictionary import *
 
 
-class Menu:
-    def main_menu(self):
-        """
-        Главное меню. Выбор основного действия: добавление перевода, начало викторины, получение справки
+def main_menu():
+    """
+    Главное меню. Выбор основного действия: добавление перевода, начало викторины, получение справки
 
-        :return:
-        """
-        clear_screen()
-        print("""
+    :return:
+    """
+    clear_screen()
+    print("""
         Выберите желаемое действие
         1. Добавить перевод в один из словарей
         2. Начать проверку знаний
         3. Получить справку о работе в программе
         """)
-        return wait(("1", "2", "3"))
+    return wait(("1", "2", "3"))
 
-    def translatation_type_select(self, dictionaries):
-        """
-        Выбираю тип перевода. С русского на английский или наоборот с английского на русский
 
-        :param dictionaries: доступные для добавления переводов словари
-        :return: none
-        """
-        clear_screen()
-        print("1. " + dictionaries[0].primary_language + " на " + dictionaries[0].secondary_language)
-        print("2. " + dictionaries[1].primary_language + " на " + dictionaries[1].secondary_language)
-        chosen_type = wait(("1", "2"))
-        self.translation_start(dictionaries[int(chosen_type) - 1])
+def translatation_type_select(dictionaries):
+    """
+    Выбираю тип перевода. С русского на английский или наоборот с английского на русский
 
-    def translation_start(self, dictionary):
-        """
-        Начинаю перевод. Запрашиваю данные у пользователя и добавляю их в словарь.
+    :param dictionaries: доступные для добавления переводов словари
+    :return: none
+    """
+    clear_screen()
+    print("1. " + dictionaries[0]['primary_language'] + " на " + dictionaries[0]['secondary_language'])
+    print("2. " + dictionaries[1]['primary_language'] + " на " + dictionaries[1]['secondary_language'])
+    chosen_type = wait(("1", "2"))
+    dictionaries[int(chosen_type) - 1] = translation_start(dictionaries[int(chosen_type) - 1])
+    return dictionaries
 
-        :param dictionary: словарь в который будут добавляться переводы
-        :return: none
-        """
-        clear_screen()
-        translation_data = dictionary.request_translation_data()
-        dictionary.add_new_translation(translation_data[0], translation_data[1])
-        chosen_action = dictionary.post_addition_actions()
-        if chosen_action == purify("N"):
-            self.translation_start(dictionary)
 
-    def quizlet_start(self, quizlet):
-        """
-        Начинаю викторину. Выбираю случайное слово из случайного словаря и отображаю его пользователю для перевода.
+def translation_start(dictionary):
+    """
+    Начинаю перевод. Запрашиваю данные у пользователя и добавляю их в словарь.
 
-        :param quizlet:
-        :return: none
-        """
-        clear_screen()
-        res = quizlet.random_translation()
-        if res:
-            quizlet.results("Вы перевели все слова во всех словарях.\n")
+    :param dictionary: словарь в который будут добавляться переводы
+    :return: none
+    """
+    clear_screen()
+    translation_data = request_translation_data(dictionary)
+    dictionary = add_new_translation(dictionary, translation_data[0], translation_data[1])
+    chosen_action = post_addition_actions()
+    if chosen_action == purify("N"):
+        translation_start(dictionary)
+    return dictionary
+
+
+def quizlet_start(quizlet):
+    """
+    Начинаю викторину. Выбираю случайное слово из случайного словаря и отображаю его пользователю для перевода.
+
+    :param quizlet:
+    :return: none
+    """
+    clear_screen()
+    res = random_translation(quizlet)
+    if res['result']:
+        results(quizlet, "Вы перевели все слова во всех словарях.\n")
+        wait('S')
+    else:
+        post_translation_actions(res['quizlet'])
+        chosen_action = wait(('N', 'S', 'R'))
+        if chosen_action == purify('N'):
+            quizlet_start(res['quizlet'])
+        if chosen_action == purify('R'):
+            results(res['quizlet'])
             wait('S')
-        else:
-            quizlet.post_translation_actions()
-            chosen_action = wait(('N', 'S', 'R'))
-            if chosen_action == purify('N'):
-                self.quizlet_start(quizlet)
-            if chosen_action == purify('R'):
-                quizlet.results()
-                wait('S')
 
-    def help(self):
-        """
-        Вывожу для пользователя справку о работе с программой
+    return res['quizlet']
 
-        :return: none
-        """
-        clear_screen()
-        print(""" 
+
+def help():
+    """
+    Вывожу для пользователя справку о работе с программой
+
+    :return: none
+    """
+    clear_screen()
+    print(""" 
         Справка по работе с программой
         
 Вы можете выбрать один из режимов работы:
@@ -92,5 +101,5 @@ class Menu:
                     "R"+ENTER - завершить викторину и увидеть свои результаты
             Стоит отметить, что после корректного перевода слова, оно уберется из пула переводов в текущей викторине.                                    
         """)
-        print("\n\nНажмите клавишу \"S\" для выхода в главное меню\n")
-        wait('S')
+    print("\n\nНажмите клавишу \"S\" для выхода в главное меню\n")
+    wait('S')
